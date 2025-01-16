@@ -14,5 +14,15 @@
       "pos_id_key": "id",
       "pos_title_key": "name"
     }
+  },
+  "visa": {
+    "method": "POST",
+    "url": "https://search.visa.com/CAREERS/careers/jobs?q=",
+    "payload": "{\"filters\":[{\"superDepartment\":[\"Technology\",\"Data Science\"]}],\"city\":[\"Ashburn\",\"Atlanta\",\"Austin\",\"Bellevue\",\"Denver\",\"Foster City\",\"Highlands Ranch\",\"Los Angeles\",\"Mentor\",\"Miami\",\"San Francisco\",\"Toronto\",\"Washington\",\"Wilmington\"],\"from\":0,\"size\":10}",
+    "keys": {
+      "positions_key": "jobDetails",
+      "pos_id_key": "refNumber",
+      "pos_title_key": "jobTitle"
+    }
   }
 }
