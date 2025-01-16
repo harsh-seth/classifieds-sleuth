@@ -8,17 +8,23 @@ const headers = {
 };
 
 // # ------------ #
-const getBody = async (url, headers) => {
+const getBody = async (url, headers, method = "GET", body = null) => {
   const res = await fetch(url, {
-    headers: headers,
-    method: "GET",
-    body: null,
+    headers,
+    method,
+    body,
   });
   return await res.json();
 };
 
 const getCompanyPositions = async (conf, meta) => {
-  const { url, query, positions_key } = conf;
+  const {
+    url,
+    method,
+    query = null,
+    payload = null,
+    keys: { positions_key },
+  } = conf;
   const { company } = meta;
   const target = qs.stringifyUrl({ url, query });
 
@@ -31,7 +37,7 @@ const getCompanyPositions = async (conf, meta) => {
     try {
       // Get one page of results
       console.log(`Querying: "${company}" [page: ${pageNum}]`);
-      const body = await getBody(target, headers);
+      const body = await getBody(target, headers, method, payload);
       result = getProperty(body, positions_key);
     } catch {
       console.log(
@@ -57,13 +63,36 @@ const getCompanyPositions = async (conf, meta) => {
   return positions;
 };
 
-Object.keys(listingConf).forEach(async (company) => {
-  // Get results for each company in listing config
-  getCompanyPositions(listingConf[company], { company }).then((positions) =>
-    console.log(positions.length)
-  );
+const standardizeResults = (positions: object[], company, keys) => {
+  const { pos_id_key, pos_title_key } = keys;
+  return positions.map((position) => [
+    company,
+    getProperty(position, pos_id_key),
+    getProperty(position, pos_title_key),
+  ]);
+};
 
-  // TODO: Persist results somewhere
-});
+// # ------------ #
+// ## START HERE
+const companyKeys = Object.keys(listingConf); // ensures deterministic order, and easier wrangling
 
-// TODO: Compute diff b/w persisted results
+// Get standardized results for each company in listing config
+console.log(`Will query ${companyKeys.length} companies.`);
+const positionQueryPromises = companyKeys.map(
+  (company) =>
+    getCompanyPositions(listingConf[company], { company }) // get raw results
+      .then((positions) =>
+        standardizeResults(positions, company, listingConf[company].keys)
+      ) // standardize results
+);
+
+Promise.all(positionQueryPromises)
+  .then(positions => {
+    positions = positions.flat(1)
+    console.log(`Done querying all companies`);
+    console.log(positions)
+    // TODO: Persist results somewhere
+  })
+  .then
+  // TODO: Compute diff b/w persisted results
+  ();

@@ -9,6 +9,10 @@
       "num": "10",
       "sort_by": "relevance"
     },
-    "positions_key": "positions"
+    "keys": {
+      "positions_key": "positions",
+      "pos_id_key": "id",
+      "pos_title_key": "name"
+    }
   }
 }
