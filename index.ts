@@ -28,7 +28,7 @@ const getBody = async (
   url: string,
   headers,
   method: string = "GET",
-  body = null
+  body: string|null|undefined = null
 ) => {
   const res = await fetch(url, {
     headers,
@@ -58,7 +58,7 @@ const getCompanyPositions = async (conf, meta) => {
     try {
       // Get one page of results
       console.log(`- Querying: "${company}" [page: ${pageNum}]`);
-      const body = await getBody(target, headers, method, payload);
+      const body = await getBody(target, headers, method, JSON.stringify(payload));
       result = getProperty(body, positions_key);
     } catch {
       console.log(
