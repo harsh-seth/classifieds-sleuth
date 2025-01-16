@@ -1,0 +1,14 @@
+{
+  "paypal": {
+    "url": "https://paypal.eightfold.ai/api/apply/v2/jobs",
+    "query": {
+      "domain": ["paypal.com"],
+      "location": "United States",
+      "query": "Engineering",
+      "start": "0",
+      "num": "10",
+      "sort_by": "relevance"
+    },
+    "positions_key": "positions"
+  }
+}
