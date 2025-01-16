@@ -2,13 +2,34 @@ import qs from "query-string";
 import { getProperty } from "dot-prop";
 import listingConf from "./listing_config.json";
 
+type jobListing = {
+  company: string;
+  id: string;
+  title: string;
+};
+
 // # ------------ #
 const headers = {
   "content-type": "application/json",
 };
 
+const blocklist_title_tags = [
+  "staff",
+  "manager",
+  "director",
+  "intern",
+  "ios",
+  "android",
+  "mobile",
+];
+
 // # ------------ #
-const getBody = async (url, headers, method = "GET", body = null) => {
+const getBody = async (
+  url: string,
+  headers,
+  method: string = "GET",
+  body = null
+) => {
   const res = await fetch(url, {
     headers,
     method,
@@ -36,12 +57,12 @@ const getCompanyPositions = async (conf, meta) => {
   while (true) {
     try {
       // Get one page of results
-      console.log(`Querying: "${company}" [page: ${pageNum}]`);
+      console.log(`- Querying: "${company}" [page: ${pageNum}]`);
       const body = await getBody(target, headers, method, payload);
       result = getProperty(body, positions_key);
     } catch {
       console.log(
-        `Failure when querying "${company}" [page ${pageNum}] - exiting early`
+        `[!!] Failure when querying "${company}" [page ${pageNum}] - exiting early`
       );
       break;
     }
@@ -58,18 +79,31 @@ const getCompanyPositions = async (conf, meta) => {
     // TODO:: Add timeouts to prevent ratelimiting
   }
   console.log(
-    `Done querying: "${company}". Found ${positions.length} positions`
+    `- Done querying: "${company}". Found ${positions.length} positions`
   );
   return positions;
 };
 
-const standardizeResults = (positions: object[], company, keys) => {
+const standardizeResults = (
+  positions: object[],
+  company: string,
+  keys
+): jobListing[] => {
   const { pos_id_key, pos_title_key } = keys;
-  return positions.map((position) => [
+  return positions.map((position) => ({
     company,
-    getProperty(position, pos_id_key),
-    getProperty(position, pos_title_key),
-  ]);
+    id: `${getProperty(position, pos_id_key)}`, // converting numeric IDs to string
+    title: getProperty(position, pos_title_key) || "",
+    ...position,
+  }));
+};
+
+// # ------------ #
+const filterRelevantPositions = (positions: jobListing[]) => {
+  return positions.filter((position) => {
+    const lowercaseTitle = position.title.toLowerCase();
+    return !blocklist_title_tags.some((tag) => lowercaseTitle.includes(tag));
+  });
 };
 
 // # ------------ #
@@ -87,12 +121,16 @@ const positionQueryPromises = companyKeys.map(
 );
 
 Promise.all(positionQueryPromises)
-  .then(positions => {
-    positions = positions.flat(1)
-    console.log(`Done querying all companies`);
-    console.log(positions)
+  .then((queryResults) => {
+    // Filter results based off keyword blocklist
+    let positions = queryResults.flat(1);
+    const total_positions_count = positions.length;
+    positions = filterRelevantPositions(positions);
+
+    console.log(
+      `Done querying all companies. Found ${positions.length} relevant positions (out of ${total_positions_count})`
+    );
+
     // TODO: Persist results somewhere
   })
-  .then
-  // TODO: Compute diff b/w persisted results
-  ();
+  .then(); // TODO: Compute diff b/w persisted results
