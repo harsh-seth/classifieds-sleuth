@@ -1,5 +1,7 @@
 import qs from "query-string";
 import { getProperty, setProperty } from "dot-prop";
+import { stringify } from "csv-stringify/sync";
+import fs from 'fs';
 import listingConf from "./listing_config.json";
 
 type jobListing = {
@@ -14,13 +16,25 @@ const headers = {
 };
 
 const blocklist_title_tags = [
+  "intern",
   "staff",
+  "mts",
+  "lead",
+  "consultant",
+  "principal",
+  "architect",
+  "management",
   "manager",
   "director",
-  "intern",
+  "vp",
+  "reliability",
+  "support",
+  "business",
+  "analyst",
   "ios",
   "android",
   "mobile",
+  ".net",
 ];
 
 // # ------------ #
@@ -116,7 +130,7 @@ const standardizeResults = (
 // # ------------ #
 const filterRelevantPositions = (positions: jobListing[]) => {
   return positions.filter((position) => {
-    const lowercaseTitle = position.title.toLowerCase();
+    const lowercaseTitle = position.title.toLowerCase().replace(/[,/#!$%^&*;:{}=\-_`~()]/g, ' ');
     return !blocklist_title_tags.some((tag) => lowercaseTitle.includes(tag));
   });
 };
@@ -150,6 +164,11 @@ Promise.all(positionQueryPromises)
       `Done querying all companies. Found ${positions.length} relevant positions (out of ${total_positions_count})`
     );
 
-    // TODO: Persist results somewhere
+    // Persist results to file
+    const output = stringify(positions, {header: true, columns: {company: "company", id: "id", title: "title"}})
+    fs.writeFile(`positions-${Date.now()}.csv`, output, (err) => {
+      if (err) throw err;
+      console.log("Results saved to disk")
+    })
   })
   .then(); // TODO: Compute diff b/w persisted results

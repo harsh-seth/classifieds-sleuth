@@ -5,6 +5,7 @@
       "domain": ["paypal.com"],
       "location": "United States",
       "query": "Engineering",
+      "Skills": "Coding",
       "start": 0,
       "num": 10,
       "sort_by": "relevance"
@@ -17,7 +18,7 @@
       "pos_id": "id",
       "pos_title": "name"
     },
-    "request_cooldown_in_secs": 5
+    "request_cooldown_in_secs": 6
   },
   "visa": {
     "method": "POST",
