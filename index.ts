@@ -1,5 +1,5 @@
 import qs from "query-string";
-import { getProperty } from "dot-prop";
+import { getProperty, setProperty } from "dot-prop";
 import listingConf from "./listing_config.json";
 
 type jobListing = {
@@ -28,13 +28,15 @@ const getBody = async (
   url: string,
   headers,
   method: string = "GET",
-  body: string|null|undefined = null
+  body: string | null | undefined = null
 ) => {
   const res = await fetch(url, {
     headers,
     method,
     body,
   });
+  if (res.status == 404) return {};
+  if (!res.ok) throw new Error(res.statusText);
   return await res.json();
 };
 
@@ -42,12 +44,11 @@ const getCompanyPositions = async (conf, meta) => {
   const {
     url,
     method,
-    query = null,
-    payload = null,
-    keys: { positions_key },
+    response_keys: { positions: positions_key },
+    request_keys: { search_start: search_start_key },
+    request_cooldown_in_secs,
   } = conf;
   const { company } = meta;
-  const target = qs.stringifyUrl({ url, query });
 
   const positions: object[] = [];
   let result: object[] | undefined = [];
@@ -56,13 +57,20 @@ const getCompanyPositions = async (conf, meta) => {
   // Get results from all search pages
   while (true) {
     try {
+      const { query = null, payload = null } = conf; // Need to fetch again to get updated start values
+      const target = qs.stringifyUrl({ url, query });
+
       // Get one page of results
-      console.log(`- Querying: "${company}" [page: ${pageNum}]`);
-      const body = await getBody(target, headers, method, JSON.stringify(payload));
+      const body = await getBody(
+        target,
+        headers,
+        method,
+        payload && JSON.stringify(payload) // Do not send payload if empty
+      );
       result = getProperty(body, positions_key);
-    } catch {
+    } catch (err) {
       console.log(
-        `[!!] Failure when querying "${company}" [page ${pageNum}] - exiting early`
+        `[!!] Failure when querying "${company}" [page ${pageNum}] - exiting early - ${err}`
       );
       break;
     }
@@ -75,11 +83,18 @@ const getCompanyPositions = async (conf, meta) => {
 
     // Prepare for next page search
     pageNum++;
-    break; // TODO: Remove this and add next page logic (needs more portal examples to build general solution)
-    // TODO:: Add timeouts to prevent ratelimiting
+    setProperty(
+      conf,
+      search_start_key,
+      (getProperty(conf, search_start_key) || 0) + result.length
+    ); // Update search start position
+    if (request_cooldown_in_secs)
+      await new Promise((resolve) =>
+        setTimeout(resolve, request_cooldown_in_secs * 1000)
+      ); // Add timeouts to prevent ratelimiting
   }
   console.log(
-    `- Done querying: "${company}". Found ${positions.length} positions`
+    `- Done querying: "${company}". Found ${positions.length} positions on ${pageNum - 1} pages`
   );
   return positions;
 };
@@ -89,7 +104,7 @@ const standardizeResults = (
   company: string,
   keys
 ): jobListing[] => {
-  const { pos_id_key, pos_title_key } = keys;
+  const { pos_id: pos_id_key, pos_title: pos_title_key } = keys;
   return positions.map((position) => ({
     company,
     id: `${getProperty(position, pos_id_key)}`, // converting numeric IDs to string
@@ -111,12 +126,16 @@ const filterRelevantPositions = (positions: jobListing[]) => {
 const companyKeys = Object.keys(listingConf); // ensures deterministic order, and easier wrangling
 
 // Get standardized results for each company in listing config
-console.log(`Will query ${companyKeys.length} companies.`);
+console.log(`Will query ${companyKeys.length} companies - ${companyKeys}`);
 const positionQueryPromises = companyKeys.map(
   (company) =>
     getCompanyPositions(listingConf[company], { company }) // get raw results
       .then((positions) =>
-        standardizeResults(positions, company, listingConf[company].keys)
+        standardizeResults(
+          positions,
+          company,
+          listingConf[company].response_keys
+        )
       ) // standardize results
 );
 

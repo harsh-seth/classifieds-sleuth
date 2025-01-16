@@ -5,15 +5,19 @@
       "domain": ["paypal.com"],
       "location": "United States",
       "query": "Engineering",
-      "start": "0",
-      "num": "10",
+      "start": 0,
+      "num": 10,
       "sort_by": "relevance"
     },
-    "keys": {
-      "positions_key": "positions",
-      "pos_id_key": "id",
-      "pos_title_key": "name"
-    }
+    "request_keys": {
+      "search_start": "query.start"
+    },
+    "response_keys": {
+      "positions": "positions",
+      "pos_id": "id",
+      "pos_title": "name"
+    },
+    "request_cooldown_in_secs": 5
   },
   "visa": {
     "method": "POST",
@@ -37,12 +41,15 @@
         "Wilmington"
       ],
       "from": 0,
-      "size": 10
+      "size": 20
     },
-    "keys": {
-      "positions_key": "jobDetails",
-      "pos_id_key": "refNumber",
-      "pos_title_key": "jobTitle"
+    "request_keys": {
+      "search_start": "payload.from"
+    },
+    "response_keys": {
+      "positions": "jobDetails",
+      "pos_id": "refNumber",
+      "pos_title": "jobTitle"
     }
   }
 }
